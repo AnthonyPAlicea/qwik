@@ -1,9 +1,7 @@
-import type { RenderOptions } from '@builder.io/qwik';
 import type { ServerRenderOptions } from '@builder.io/qwik-city/middleware/request-handler';
 import { requestHandler } from '@builder.io/qwik-city/middleware/request-handler';
-import { type Render, setServerPlatform } from '@builder.io/qwik/server';
+import { setServerPlatform } from '@builder.io/qwik/server';
 import { getNotFound } from '@qwik-city-not-found-paths';
-import qwikCityPlan from '@qwik-city-plan';
 import { isStaticPath } from '@qwik-city-static-paths';
 import { createReadStream } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -17,7 +15,7 @@ import { _deserializeData, _serializeData, _verifySerializable } from '@builder.
 // @builder.io/qwik-city/middleware/node
 
 /**
- * @alpha
+ * @public
  */
 export function createQwikCity(opts: QwikCityNodeRequestOptions) {
   // Patch Stream APIs
@@ -115,7 +113,7 @@ export function createQwikCity(opts: QwikCityNodeRequestOptions) {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface PlatformNode {
   ssr?: true;
@@ -124,7 +122,7 @@ export interface PlatformNode {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface QwikCityNodeRequestOptions extends ServerRenderOptions {
   /** Options for serving static files */
@@ -137,25 +135,7 @@ export interface QwikCityNodeRequestOptions extends ServerRenderOptions {
 }
 
 /**
- * @alpha
+ * @public
  */ export interface NodeRequestNextFunction {
   (err?: any): void;
-}
-
-/**
- * @alpha
- * @deprecated Please use `createQwikCity()` instead.
- *
- * Example:
- *
- * ```ts
- * import { createQwikCity } from '@builder.io/qwik-city/middleware/node';
- * import qwikCityPlan from '@qwik-city-plan';
- * import render from './entry.ssr';
- *
- * const { router, notFound } = createQwikCity({ render, qwikCityPlan });
- * ```
- */
-export function qwikCity(render: Render, opts?: RenderOptions) {
-  return createQwikCity({ render, qwikCityPlan, ...opts });
 }

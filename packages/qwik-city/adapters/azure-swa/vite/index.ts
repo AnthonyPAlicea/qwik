@@ -4,14 +4,13 @@ import { join } from 'node:path';
 import fs from 'node:fs';
 
 /**
- * @alpha
+ * @public
  */
 export function azureSwaAdapter(opts: AzureSwaAdapterOptions = {}): any {
   const env = process?.env;
   return viteAdapter({
     name: 'azure-swa',
     origin: env?.ORIGIN ?? env?.URL ?? 'https://yoursitename.region.2.azurestaticapps.net',
-    staticGenerate: opts.staticGenerate,
     ssg: opts.ssg,
     cleanStaticGenerated: true,
 
@@ -68,23 +67,11 @@ export function azureSwaAdapter(opts: AzureSwaAdapterOptions = {}): any {
 }
 
 /**
- * @alpha
- * @deprecated Please use `azureSwaAdapter` exported from `@builder.io/qwik-city/adapters/azure-swa/vite` instead.
- */
-export const azureSwaAdaptor = azureSwaAdapter;
-
-/**
- * @alpha
+ * @public
  */
 export interface AzureSwaAdapterOptions extends ServerAdapterOptions {}
 
 /**
- * @alpha
- * @deprecated Please use `AzureSwaAdapterOptions` instead.
- */
-export type AzureSwaAdaptorOptions = AzureSwaAdapterOptions;
-
-/**
- * @alpha
+ * @public
  */
 export type { StaticGenerateRenderOptions };

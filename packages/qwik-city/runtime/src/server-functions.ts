@@ -44,7 +44,7 @@ import { isDev, isServer } from '@builder.io/qwik/build';
 import type { FormSubmitCompletedDetail } from './form-component';
 
 /**
- * @alpha
+ * @public
  */
 export const routeActionQrl = ((
   actionQrl: QRL<(form: JSONObject, event: RequestEventAction) => any>,
@@ -88,10 +88,13 @@ Action.run() can only be called on the browser, for example when a user clicks a
         form = input.target as HTMLFormElement;
         data = new FormData(form);
         if (
-          input.submitter instanceof HTMLInputElement ||
-          input.submitter instanceof HTMLButtonElement
+          (input.submitter instanceof HTMLInputElement ||
+            input.submitter instanceof HTMLButtonElement) &&
+          input.submitter.name
         ) {
-          data.append(input.submitter.name, input.submitter.value);
+          if (input.submitter.name) {
+            data.append(input.submitter.name, input.submitter.value);
+          }
         }
       } else {
         data = input;
@@ -132,7 +135,6 @@ Action.run() can only be called on the browser, for example when a user clicks a
       });
     });
     initialState.submit = submit;
-    initialState.run = submit;
 
     return state;
   }
@@ -147,7 +149,7 @@ Action.run() can only be called on the browser, for example when a user clicks a
 }) as unknown as ActionConstructorQRL;
 
 /**
- * @alpha
+ * @public
  */
 export const globalActionQrl = ((
   actionQrl: QRL<(form: JSONObject, event: RequestEventAction) => any>,
@@ -164,21 +166,21 @@ export const globalActionQrl = ((
 }) as ActionConstructorQRL;
 
 /**
- * @alpha
+ * @public
  */
 export const routeAction$: ActionConstructor = /*#__PURE__*/ implicit$FirstArg(
   routeActionQrl
 ) as any;
 
 /**
- * @alpha
+ * @public
  */
 export const globalAction$: ActionConstructor = /*#__PURE__*/ implicit$FirstArg(
   globalActionQrl
 ) as any;
 
 /**
- * @alpha
+ * @public
  */
 export const routeLoaderQrl = ((
   loaderQrl: QRL<(event: RequestEventLoader) => unknown>,
@@ -206,12 +208,12 @@ export const routeLoaderQrl = ((
 }) as LoaderConstructorQRL;
 
 /**
- * @alpha
+ * @public
  */
 export const routeLoader$: LoaderConstructor = /*#__PURE__*/ implicit$FirstArg(routeLoaderQrl);
 
 /**
- * @alpha
+ * @public
  */
 export const validatorQrl = ((
   validator: QRL<(ev: RequestEvent, data: unknown) => ValueOrPromise<ValidatorReturn>>
@@ -225,12 +227,12 @@ export const validatorQrl = ((
 }) as ValidatorConstructorQRL;
 
 /**
- * @alpha
+ * @public
  */
 export const validator$: ValidatorConstructor = /*#__PURE__*/ implicit$FirstArg(validatorQrl);
 
 /**
- * @alpha
+ * @public
  */
 export const zodQrl = ((
   qrl: QRL<z.ZodRawShape | z.Schema | ((z: typeof import('zod').z) => z.ZodRawShape)>
@@ -273,12 +275,12 @@ export const zodQrl = ((
 }) as ZodConstructorQRL;
 
 /**
- * @alpha
+ * @public
  */
 export const zod$: ZodConstructor = /*#__PURE__*/ implicit$FirstArg(zodQrl) as any;
 
 /**
- * @alpha
+ * @public
  */
 export const serverQrl: ServerConstructorQRL = (qrl: QRL<(...arss: any[]) => any>) => {
   if (isServer) {
@@ -318,9 +320,15 @@ export const serverQrl: ServerConstructorQRL = (qrl: QRL<(...arss: any[]) => any
         if (!res.ok) {
           throw new Error(`Server function failed: ${res.statusText}`);
         }
-        const str = await res.text();
-        const obj = await _deserializeData(str, ctxElm ?? document.documentElement);
-        return obj;
+        if (res.headers.get('Content-Type') === 'text/event-stream') {
+          const { writable, readable } = getSSETransformer();
+          res.body?.pipeTo(writable);
+          return streamAsyncIterator(readable, ctxElm ?? document.documentElement);
+        } else {
+          const str = await res.text();
+          const obj = await _deserializeData(str, ctxElm ?? document.documentElement);
+          return obj;
+        }
       }
     }) as any;
   }
@@ -328,7 +336,7 @@ export const serverQrl: ServerConstructorQRL = (qrl: QRL<(...arss: any[]) => any
 };
 
 /**
- * @alpha
+ * @public
  */
 export const server$ = /*#__PURE__*/ implicit$FirstArg(serverQrl);
 
@@ -367,26 +375,73 @@ const getValidators = (rest: (CommonLoaderActionOptions | DataValidator)[], qrl:
   };
 };
 
-/**
- * @alpha
- * @deprecated - use `globalAction$()` instead
- */
-export const actionQrl = globalActionQrl;
+const getSSETransformer = () => {
+  // Convert the stream into a stream of lines
+  let currentLine = '';
+  const encoder = new TextDecoder();
+  const transformer = new TransformStream<Uint8Array, SSEvent>({
+    transform(chunk, controller) {
+      const lines = encoder.decode(chunk).split('\n\n');
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = currentLine + lines[i];
+        if (line.length === 0) {
+          controller.terminate();
+          break;
+        } else {
+          controller.enqueue(parseEvent(line));
+          currentLine = '';
+        }
+      }
+      currentLine += lines[lines.length - 1];
+    },
+  });
+  return transformer;
+};
 
-/**
- * @alpha
- * @deprecated - use `globalAction$()` instead
- */
-export const action$ = globalAction$;
+interface SSEvent {
+  data: string;
+  [key: string]: string;
+}
+const parseEvent = (message: string): SSEvent => {
+  const lines = message.split('\n');
+  const event: SSEvent = {
+    data: '',
+  };
+  let data = '';
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      data += line.slice(6) + '\n';
+    } else {
+      const [key, value] = line.split(':');
+      if (typeof key === 'string' && typeof value === 'string') {
+        event[key] = value.trim();
+      }
+    }
+  }
+  event.data = data;
+  return event;
+};
 
-/**
- * @alpha
- * @deprecated - use `routeLoader$()` instead
- */
-export const loaderQrl = routeLoaderQrl;
+async function* streamAsyncIterator(
+  stream: ReadableStream<SSEvent>,
+  ctxElm: unknown
+): AsyncGenerator<unknown> {
+  // Get a lock on the stream
+  const reader = stream.getReader();
 
-/**
- * @alpha
- * @deprecated - use `routeLoader$()` instead
- */
-export const loader$ = routeLoader$;
+  try {
+    while (true) {
+      // Read from the stream
+      const { done, value } = await reader.read();
+      // Exit if we're done
+      if (done) {
+        return;
+      }
+      // Else yield the chunk
+      const obj = await _deserializeData(value.data, ctxElm);
+      yield obj;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

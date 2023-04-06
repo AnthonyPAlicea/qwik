@@ -24,7 +24,7 @@ use swc_atoms::{js_word, JsWord};
 use swc_common::comments::{Comments, SingleThreadedComments};
 use swc_common::SyntaxContext;
 use swc_common::{errors::HANDLER, sync::Lrc, SourceMap, Span, Spanned, DUMMY_SP};
-use swc_ecmascript::ast;
+use swc_ecmascript::ast::{self, PropName};
 use swc_ecmascript::utils::{private_ident, quote_ident, ExprFactory};
 use swc_ecmascript::visit::{noop_fold_type, Fold, FoldWith, VisitWith};
 
@@ -141,7 +141,6 @@ fn convert_signal_word(id: &JsWord) -> Option<JsWord> {
         None
     }
 }
-
 impl<'a> QwikTransform<'a> {
     pub fn new(options: QwikTransformOptions<'a>) -> Self {
         let mut marker_functions = HashMap::new();
@@ -169,13 +168,17 @@ impl<'a> QwikTransform<'a> {
             .imports
             .iter()
             .flat_map(|(id, import)| {
-                if import.kind == ImportKind::Named
-                    && (import.source == *BUILDER_IO_QWIK_JSX
-                        || import.source == *BUILDER_IO_QWIK_JSX_DEV)
-                {
-                    Some(id.clone())
-                } else {
-                    None
+                match (
+                    import.kind,
+                    import.source.as_ref(),
+                    import.specifier.as_ref(),
+                ) {
+                    (ImportKind::Named, "@builder.io/qwik", "jsx") => Some(id.clone()),
+                    (ImportKind::Named, "@builder.io/qwik", "jsxs") => Some(id.clone()),
+                    (ImportKind::Named, "@builder.io/qwik", "jsxDEV") => Some(id.clone()),
+                    (ImportKind::Named, "@builder.io/qwik/jsx-runtime", _) => Some(id.clone()),
+                    (ImportKind::Named, "@builder.io/qwik/jsx-dev-runtime", _) => Some(id.clone()),
+                    _ => None,
                 }
             })
             .collect();
@@ -718,12 +721,15 @@ impl<'a> QwikTransform<'a> {
                 self.jsx_mutable = true;
                 (true, true, false)
             }
-            _ => (false, false, false),
+            _ => {
+                self.jsx_mutable = true;
+                (false, true, false)
+            }
         };
         let should_emit_key = is_fn || self.root_jsx_mode;
         self.root_jsx_mode = false;
 
-        let (mutable_props, immutable_props, children, flags) =
+        let (dynamic_props, mutable_props, immutable_props, children, flags) =
             self.handle_jsx_props_obj(node_props, is_fn, is_text_only);
 
         let key = if node.args.len() == 1 {
@@ -748,6 +754,11 @@ impl<'a> QwikTransform<'a> {
                 self.ensure_core_import(&_JSX_C),
                 vec![node_type, mutable_props, flags, key],
             )
+        } else if dynamic_props {
+            (
+                self.ensure_core_import(&_JSX_S),
+                vec![node_type, mutable_props, immutable_props, flags, key],
+            )
         } else {
             (
                 self.ensure_core_import(&_JSX_Q),
@@ -761,7 +772,6 @@ impl<'a> QwikTransform<'a> {
                 ],
             )
         };
-
         if self.options.mode == EmitMode::Dev {
             args.push(self.get_dev_location(node.span));
         }
@@ -1036,12 +1046,13 @@ impl<'a> QwikTransform<'a> {
         is_fn: bool,
         is_text_only: bool,
     ) -> (
+        bool,
         ast::ExprOrSpread,
         ast::ExprOrSpread,
         ast::ExprOrSpread,
         ast::ExprOrSpread,
     ) {
-        let (mut mutable_props, mut immutable_props, children, flags) =
+        let (dynamic_props, mut mutable_props, mut immutable_props, children, flags) =
             self.internal_handle_jsx_props_obj(expr, is_fn, is_text_only);
 
         if is_fn && !immutable_props.is_empty() {
@@ -1102,7 +1113,7 @@ impl<'a> QwikTransform<'a> {
                 raw: None,
             }))),
         };
-        (mutable, immutable_props, children, flags)
+        (dynamic_props, mutable, immutable_props, children, flags)
     }
 
     #[allow(clippy::cognitive_complexity)]
@@ -1112,6 +1123,7 @@ impl<'a> QwikTransform<'a> {
         is_fn: bool,
         is_text_only: bool,
     ) -> (
+        bool,
         Vec<ast::PropOrSpread>,
         Vec<ast::PropOrSpread>,
         Option<Box<ast::Expr>>,
@@ -1135,6 +1147,11 @@ impl<'a> QwikTransform<'a> {
                     .filter(|(_, t)| matches!(t, IdentType::Var(true)))
                     .cloned()
                     .collect();
+
+                let dynamic_props = object
+                    .props
+                    .iter()
+                    .any(|prop| !matches!(prop, ast::PropOrSpread::Prop(_)));
 
                 for prop in object.props {
                     let mut name_token = false;
@@ -1172,7 +1189,7 @@ impl<'a> QwikTransform<'a> {
                                     } else {
                                         self.jsx_mutable = prev;
                                     }
-                                    if is_fn {
+                                    if is_fn || dynamic_props {
                                         // self.jsx_mutable = true;
                                         // static_subtree = false;
                                         mutable_props.push(ast::PropOrSpread::Prop(Box::new(
@@ -1365,20 +1382,25 @@ impl<'a> QwikTransform<'a> {
                                     } else {
                                         immutable_props.push(ast::PropOrSpread::Prop(Box::new(
                                             ast::Prop::KeyValue(ast::KeyValueProp {
-                                                key: node.key.clone(),
+                                                key: normalize_jsx_key(&node.key, &key_word),
                                                 value: node.value.clone(),
                                             }),
                                         )));
                                     }
                                 } else if let Some((getter, is_immutable)) =
-                                    self.convert_to_getter(&node.value)
+                                    self.convert_to_getter(&node.value, is_fn)
                                 {
+                                    let key = if is_fn {
+                                        node.key.clone()
+                                    } else {
+                                        normalize_jsx_key(&node.key, &key_word)
+                                    };
                                     if is_fn {
                                         mutable_props.push(ast::PropOrSpread::Prop(Box::new(
                                             ast::Prop::Getter(ast::GetterProp {
                                                 span: DUMMY_SP,
                                                 type_ann: None,
-                                                key: node.key.clone(),
+                                                key: key.clone(),
                                                 body: Some(ast::BlockStmt {
                                                     span: DUMMY_SP,
                                                     stmts: vec![ast::Stmt::Return(
@@ -1393,7 +1415,7 @@ impl<'a> QwikTransform<'a> {
                                     }
                                     let entry = ast::PropOrSpread::Prop(Box::new(
                                         ast::Prop::KeyValue(ast::KeyValueProp {
-                                            key: node.key.clone(),
+                                            key,
                                             value: Box::new(getter),
                                         }),
                                     ));
@@ -1402,6 +1424,13 @@ impl<'a> QwikTransform<'a> {
                                     } else {
                                         mutable_props.push(entry);
                                     }
+                                } else if !is_fn && key_word == *CLASS_NAME {
+                                    mutable_props.push(ast::PropOrSpread::Prop(Box::new(
+                                        ast::Prop::KeyValue(ast::KeyValueProp {
+                                            key: normalize_jsx_key(&node.key, &key_word),
+                                            value: node.value.clone(),
+                                        }),
+                                    )));
                                 } else {
                                     mutable_props.push(prop.fold_with(self));
                                 }
@@ -1410,6 +1439,8 @@ impl<'a> QwikTransform<'a> {
                             }
                         }
                         prop => {
+                            static_listeners = false;
+                            static_subtree = false;
                             mutable_props.push(prop.fold_with(self));
                         }
                     };
@@ -1427,9 +1458,15 @@ impl<'a> QwikTransform<'a> {
                 if static_subtree {
                     flags |= 1 << 1;
                 }
-                (mutable_props, immutable_props, children, flags)
+                (
+                    dynamic_props,
+                    mutable_props,
+                    immutable_props,
+                    children,
+                    flags,
+                )
             }
-            _ => (vec![], vec![], None, 0),
+            _ => (true, vec![], vec![], None, 0),
         }
     }
 
@@ -1479,7 +1516,7 @@ impl<'a> QwikTransform<'a> {
         }
     }
 
-    fn convert_to_getter(&mut self, expr: &ast::Expr) -> Option<(ast::Expr, bool)> {
+    fn convert_to_getter(&mut self, expr: &ast::Expr, is_fn: bool) -> Option<(ast::Expr, bool)> {
         let inlined = self.create_synthetic_qqhook(expr.clone(), true);
         if let Some(expr) = inlined.0 {
             return Some((expr, inlined.1));
@@ -1488,7 +1525,11 @@ impl<'a> QwikTransform<'a> {
         if let ast::Expr::Member(member) = expr {
             let prop_sym = prop_to_string(&member.prop);
             if let Some(prop_sym) = prop_sym {
-                let id = self.ensure_core_import(&_WRAP_PROP);
+                let id = if is_fn {
+                    self.ensure_core_import(&_WRAP_PROP)
+                } else {
+                    self.ensure_core_import(&_WRAP_SIGNAL)
+                };
                 return Some((make_wrap(&id, member.obj.clone(), prop_sym), false));
             }
         }
@@ -2278,6 +2319,13 @@ fn make_wrap(method: &Id, obj: Box<ast::Expr>, prop: JsWord) -> ast::Expr {
         span: DUMMY_SP,
         type_args: None,
     })
+}
+
+fn normalize_jsx_key(key: &ast::PropName, key_word: &JsWord) -> PropName {
+    if key_word == "className" {
+        return ast::PropName::Ident(ast::Ident::new("class".into(), DUMMY_SP));
+    }
+    key.clone()
 }
 
 fn get_null_arg() -> ast::ExprOrSpread {

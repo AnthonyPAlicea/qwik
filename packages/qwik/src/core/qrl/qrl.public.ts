@@ -1,3 +1,4 @@
+import { implicit$FirstArg } from '../util/implicit_dollar';
 import { qRuntimeQrl } from '../util/qdev';
 import type { QRLDev } from './qrl';
 import { createQRL } from './qrl-class';
@@ -95,7 +96,7 @@ import { createQRL } from './qrl-class';
  *
  * Let's assume that you intend to write code such as this:
  *
- * ```typescript
+ * ```tsx
  * return <button onClick={() => (await import('./chunk-abc.js')).onClick}>
  * ```
  *
@@ -214,7 +215,6 @@ export type PropFunction<T extends Function> = T extends (...args: infer ARGS) =
  * ```tsx
  *
  * import { createContextId, useContext, useContextProvider } from './use/use-context';
- * import { useRef } from './use/use-ref';
  * import { Resource, useResource$ } from './use/use-resource';
  *
  * export const greet = () => console.log('greet');
@@ -252,3 +252,15 @@ export const $ = <T>(expression: T): QRL<T> => {
 
   return createQRL<T>(null, 's' + runtimeSymbolId++, expression, null, null, null, null);
 };
+
+/**
+ * @public
+ */
+export const eventQrl = <T>(qrl: QRL<T>): QRL<T> => {
+  return qrl;
+};
+
+/**
+ * @public
+ */
+export const event$ = implicit$FirstArg(eventQrl);

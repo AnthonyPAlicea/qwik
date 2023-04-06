@@ -76,8 +76,8 @@
 }
 
 .repl-commands .copy-to-playground {
-  align-items: center;
   display: flex;
+  align-items: center;
   gap: 10px;
   border: 1px solid;
   padding: 2px 8px;
@@ -102,6 +102,10 @@
 
 .repl-tab-diagnostics.active-tab {
   border-top-color: var(--repl-diagnostics-active-border-color);
+}
+
+.repl-tab-diagnostics.has-errors {
+  color: red;
 }
 
 .repl-tab-diagnostics:not(.active-tab):hover {

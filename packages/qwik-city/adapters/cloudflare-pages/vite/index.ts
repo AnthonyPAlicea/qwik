@@ -4,14 +4,13 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * @alpha
+ * @public
  */
 export function cloudflarePagesAdapter(opts: CloudflarePagesAdapterOptions = {}): any {
   const env = process?.env;
   return viteAdapter({
     name: 'cloudflare-pages',
     origin: env?.CF_PAGES_URL ?? env?.ORIGIN ?? 'https://your.cloudflare.pages.dev',
-    staticGenerate: opts.staticGenerate,
     ssg: opts.ssg,
     staticPaths: opts.staticPaths,
     cleanStaticGenerated: true,
@@ -54,13 +53,7 @@ export function cloudflarePagesAdapter(opts: CloudflarePagesAdapterOptions = {})
 }
 
 /**
- * @alpha
- * @deprecated Use `cloudflarePagesAdapter` exported from `@builder.io/qwik-city/adapters/cloudflare-pages/vite` instead.
- */
-export const cloudflarePagesAdaptor = cloudflarePagesAdapter;
-
-/**
- * @alpha
+ * @public
  */
 export interface CloudflarePagesAdapterOptions extends ServerAdapterOptions {
   /**
@@ -80,12 +73,6 @@ export interface CloudflarePagesAdapterOptions extends ServerAdapterOptions {
 }
 
 /**
- * @alpha
- * @deprecated Use `CloudflarePagesAdapterOptions` instead.
- */
-export type CloudflarePagesAdaptorOptions = CloudflarePagesAdapterOptions;
-
-/**
- * @alpha
+ * @public
  */
 export type { StaticGenerateRenderOptions };

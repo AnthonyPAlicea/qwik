@@ -22,6 +22,7 @@ export default component$<{
           options: getBuilderSearchParams(query),
           userAttributes: {
             urlPath: location.url.pathname,
+            site: 'qwik.builder.io',
           },
         },
         getContent
@@ -70,12 +71,8 @@ export function getCachedValue<T>(
   });
   const cacheValue = CACHE.get(keyString);
   if (cacheValue && cacheValue.timestamp + cacheTime > now) {
-    // eslint-disable-next-line no-console
-    isDev && console.log('cache hit', keyString);
     return cacheValue.content;
   } else {
-    // eslint-disable-next-line no-console
-    isDev && console.log('cache miss', keyString);
     const content = factory(key);
     CACHE.set(keyString, { timestamp: now, content });
     return content;

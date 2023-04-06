@@ -221,8 +221,12 @@ function updateSortAndPriorities(manifest: QwikManifest) {
 function sortAlphabetical(a: string, b: string) {
   a = a.toLocaleLowerCase();
   b = b.toLocaleLowerCase();
-  if (a < b) return -1;
-  if (a > b) return 1;
+  if (a < b) {
+    return -1;
+  }
+  if (a > b) {
+    return 1;
+  }
   return 0;
 }
 
@@ -324,7 +328,7 @@ function addBundleToManifest(
       bundle.dynamicImports = bundleDynamicImports;
     }
 
-    const modulePaths = Object.keys(outputBundle.modules);
+    const modulePaths = Object.keys(outputBundle.modules).filter((m) => !m.startsWith(`\u0000`));
     if (modulePaths.length > 0) {
       bundle.origins = modulePaths;
     }

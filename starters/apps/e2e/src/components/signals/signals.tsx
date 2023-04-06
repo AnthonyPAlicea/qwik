@@ -1,7 +1,5 @@
 import {
   component$,
-  useRef,
-  type Ref,
   type Signal,
   useSignal,
   useStore,
@@ -35,7 +33,7 @@ export const Signals = component$(() => {
   );
 });
 export const SignalsChildren = component$(() => {
-  const ref = useRef();
+  const ref = useSignal<Element>();
   const ref2 = useSignal<Element>();
   const id = useSignal(0);
   const signal = useSignal('');
@@ -54,12 +52,12 @@ export const SignalsChildren = component$(() => {
   const styles = useSignal('body { background: white}');
 
   useVisibleTask$(() => {
-    ref.current!.setAttribute('data-set', 'ref');
+    ref.value!.setAttribute('data-set', 'ref');
     ref2.value!.setAttribute('data-set', 'ref2');
   });
 
   renders.count++;
-  const rerenders = renders.count;
+  const rerenders = renders.count + 0;
   return (
     <div aria-label={store.attribute}>
       <button
@@ -123,6 +121,8 @@ export const SignalsChildren = component$(() => {
       <FineGrainedUnsubs />
       <Issue3415 />
       <BindSignal />
+      <Issue3482 />
+      <Issue3663 />
     </div>
   );
 });
@@ -130,7 +130,7 @@ export const SignalsChildren = component$(() => {
 interface ChildProps {
   count: number;
   text: string;
-  ref: Ref<Element>;
+  ref: Signal<Element | undefined>;
   ref2: Signal<Element | undefined>;
   signal: Signal<string>;
   signal2: Signal<string>;
@@ -145,7 +145,7 @@ export const Child = component$((props: ChildProps) => {
     { reactive: false }
   );
   renders.count++;
-  const rerenders = renders.count;
+  const rerenders = renders.count + 0;
   return (
     <>
       <div id="child-renders">Child renders: {rerenders}</div>
@@ -439,7 +439,9 @@ p { padding: 0.5em; border:1px solid; margin:0.2em }
         onClick$={() => {
           store.n++;
           store.flag = !store.flag;
-          if (store.n >= colors.length) store.n = 0;
+          if (store.n >= colors.length) {
+            store.n = 0;
+          }
           store.color = colors[store.n];
           colorSignal.value = colors[store.n];
         }}
@@ -493,7 +495,9 @@ export const Issue2245B = component$(() => {
           store.n++;
           store.flag = !store.flag;
           flagSignal.value = !flagSignal.value;
-          if (store.n >= colors.length) store.n = 0;
+          if (store.n >= colors.length) {
+            store.n = 0;
+          }
           store.color = colors[store.n];
           colorSignal.value = colors[store.n];
         }}
@@ -809,3 +813,53 @@ export const BindSignal = component$(() => {
     </>
   );
 });
+
+export const Issue3482 = component$((props) => {
+  const count = useStore({
+    'data-foo': 0,
+  });
+
+  return (
+    <>
+      <button
+        id="issue-3482-button"
+        data-count={count['data-foo']}
+        onClick$={() => count['data-foo']++}
+      >
+        Increment {count['data-foo']}
+      </button>
+      <div id="issue-3482-result" data-count={count['data-foo']}>
+        {count['data-foo']}
+      </div>
+    </>
+  );
+});
+
+export const Issue3663 = component$(() => {
+  const store = useStore({
+    'Custom Counter': 0,
+  });
+  const a = store['Custom Counter'] + 0;
+  return (
+    <div>
+      <button id="issue-3663-button" onClick$={() => store['Custom Counter']++}>
+        Increment
+      </button>
+      <div class="issue-3663-result" data-value={store['Custom Counter']}>
+        {store['Custom Counter']}
+      </div>
+      <Issue3663Cmp prop={store['Custom Counter']} />
+      <div class="issue-3663-result" data-value={a}>
+        {a}
+      </div>
+    </div>
+  );
+});
+
+function Issue3663Cmp(props: { prop: number }) {
+  return (
+    <div class="issue-3663-result" data-value={props.prop}>
+      {props.prop}
+    </div>
+  );
+}

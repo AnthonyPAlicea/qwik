@@ -111,6 +111,13 @@ export const _serializeData = async (data: any, pureQRL?: boolean) => {
         suffix += '_';
       }
     }
+    if (isObject(obj)) {
+      const target = getProxyTarget(obj);
+      if (target) {
+        suffix += '!';
+        obj = target;
+      }
+    }
     const key = objToId.get(obj);
     if (key === undefined) {
       throw qError(QError_missingObjectId, obj);
@@ -135,7 +142,7 @@ export const _serializeData = async (data: any, pureQRL?: boolean) => {
       case 'boolean':
         return obj;
     }
-    const value = serializeValue(obj, mustGetObjId, containerState);
+    const value = serializeValue(obj, mustGetObjId, collector, containerState);
     if (value !== undefined) {
       return value;
     }
@@ -290,6 +297,7 @@ export const _pauseFromContexts = async (
         subs: [],
       },
       objs: [],
+      funcs: [],
       qrls: [],
       resources: collector.$resources$,
       mode: 'static',
@@ -469,7 +477,7 @@ export const _pauseFromContexts = async (
       case 'boolean':
         return obj;
     }
-    const value = serializeValue(obj, mustGetObjId, containerState);
+    const value = serializeValue(obj, mustGetObjId, collector, containerState);
     if (value !== undefined) {
       return value;
     }
@@ -580,6 +588,7 @@ export const _pauseFromContexts = async (
       subs,
     },
     objs,
+    funcs: collector.$inlinedFunctions$,
     resources: collector.$resources$,
     qrls: collector.$qrls$,
     mode: canRender ? 'render' : 'listeners',
@@ -607,7 +616,9 @@ export const getNodesInScope = <T>(
       return FILTER_SKIP;
     },
   });
-  while (walker.nextNode());
+  while (walker.nextNode()) {
+    // do nothing
+  }
 
   return results;
 };
@@ -618,6 +629,7 @@ export interface Collector {
   $noSerialize$: any[];
   $elements$: QContext[];
   $qrls$: QRL[];
+  $inlinedFunctions$: string[];
   $resources$: ResourceReturnInternal<any>[];
   $prefetch$: number;
   $deferElements$: QContext[];
@@ -633,13 +645,11 @@ const collectProps = (elCtx: QContext, collector: Collector) => {
     const el = elCtx.$element$ as VirtualElement;
     if (subs) {
       for (const sub of subs) {
-        if (sub[1] === el) {
-          if (sub[0] === 0) {
-            collectElement(el, collector);
-            return;
-          } else {
-            collectValue(props, collector, false);
-          }
+        if (sub[0] === 0 && sub[1] === el) {
+          collectElement(el, collector);
+          return;
+        } else {
+          collectValue(props, collector, false);
         }
       }
     }
@@ -653,6 +663,7 @@ const createCollector = (containerState: ContainerState): Collector => {
     $objSet$: new Set(),
     $prefetch$: 0,
     $noSerialize$: [],
+    $inlinedFunctions$: [],
     $resources$: [],
     $elements$: [],
     $qrls$: [],

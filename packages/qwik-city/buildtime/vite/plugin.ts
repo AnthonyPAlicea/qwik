@@ -34,7 +34,7 @@ import {
 import { postBuild } from '../../adapters/shared/vite/post-build';
 
 /**
- * @alpha
+ * @public
  */
 export function qwikCity(userOpts?: QwikCityVitePluginOptions): any {
   let ctx: BuildContext | null = null;
@@ -67,7 +67,6 @@ export function qwikCity(userOpts?: QwikCityVitePluginOptions): any {
     async config() {
       const updatedViteConfig: UserConfig = {
         appType: 'custom',
-        base: userOpts?.basePathname, // TODO: Remove
         optimizeDeps: {
           exclude: [QWIK_CITY, QWIK_CITY_PLAN_ID, QWIK_CITY_ENTRIES_ID, QWIK_CITY_SW_REGISTER],
         },
@@ -201,18 +200,24 @@ export function qwikCity(userOpts?: QwikCityVitePluginOptions): any {
             const mdxResult = await mdxTransform(code, id);
             return mdxResult;
           } catch (e: any) {
-            const column = e.position.start.column;
-            const line = e.position.start.line;
-            const err: Rollup.RollupError = Object.assign(new Error(e.reason), {
-              id,
-              plugin: 'qwik-city-mdx',
-              loc: {
-                column: column,
-                line: line,
-              },
-              stack: '',
-            });
-            this.error(err);
+            if (e && typeof e == 'object' && 'position' in e && 'reason' in e) {
+              const column = (e as any).position?.start.column;
+              const line = (e as any).position?.start.line;
+              const err: Rollup.RollupError = Object.assign(new Error(e.reason), {
+                id,
+                plugin: 'qwik-city-mdx',
+                loc: {
+                  column: column,
+                  line: line,
+                },
+                stack: '',
+              });
+              this.error(err);
+            } else if (e instanceof Error) {
+              this.error(e);
+            } else {
+              this.error(String(e));
+            }
           }
         }
       }

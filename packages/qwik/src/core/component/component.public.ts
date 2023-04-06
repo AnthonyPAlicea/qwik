@@ -3,13 +3,13 @@ import type { JSXNode } from '../render/jsx/types/jsx-node';
 import { OnRenderProp, QSlot } from '../util/markers';
 import type { ComponentBaseProps, JSXChildren } from '../render/jsx/types/jsx-qwik-attributes';
 import type { FunctionComponent } from '../render/jsx/types/jsx-node';
-import { _jsxC } from '../render/jsx/jsx-runtime';
+import { Virtual, _jsxC } from '../render/jsx/jsx-runtime';
 import { SERIALIZABLE_STATE } from '../container/serializers';
 import { qTest } from '../util/qdev';
-import { Virtual } from '../render/jsx/utils.public';
 import { assertQrl } from '../qrl/qrl-class';
 import type { ValueOrPromise } from '../util/types';
 import { _IMMUTABLE } from '../state/constants';
+import { assertNumber } from '../error/assert';
 
 /**
  * Infers `Props` from the component.
@@ -72,7 +72,7 @@ export type TransformProp<T> = T extends PropFnInterface<infer ARGS, infer RET>
   : T;
 
 /**
- * @alpha
+ * @public
  */
 export type EventHandler<T> = QRL<(value: T) => any>;
 
@@ -138,6 +138,7 @@ export const componentQrl = <PROPS extends {}>(
   // Return a QComponent Factory function.
   function QwikComponent(props: PublicProps<PROPS>, key: string | null, flags: number): JSXNode {
     assertQrl(componentQrl);
+    assertNumber(flags, 'The Qwik Component was not invocated correctly');
     const hash = qTest ? 'sX' : componentQrl.$hash$.slice(0, 4);
     const finalKey = hash + ':' + (key ? key : '');
     return _jsxC(

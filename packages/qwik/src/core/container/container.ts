@@ -1,6 +1,5 @@
 import { qError, QError_invalidRefValue } from '../error/error';
 import { isServerPlatform } from '../platform/platform';
-import type { Ref } from '../use/use-ref';
 import type { ResourceReturnInternal, SubscriberEffect } from '../use/use-task';
 import { logWarn } from '../util/log';
 import { qSerialize, qTest, seal } from '../util/qdev';
@@ -16,7 +15,6 @@ import {
 } from '../state/common';
 import type { Signal } from '../state/signal';
 import { directGetAttribute } from '../render/fast-calls';
-import { assertTrue } from '../error/assert';
 import type { QContext } from '../state/context';
 
 export type GetObject = (id: string) => any;
@@ -24,7 +22,7 @@ export type GetObjID = (obj: any) => string | null;
 export type MustGetObjID = (obj: any) => string;
 
 /**
- * @alpha
+ * @public
  */
 export interface SnapshotMetaValue {
   w?: string; // q:watches
@@ -34,12 +32,12 @@ export interface SnapshotMetaValue {
 }
 
 /**
- * @alpha
+ * @public
  */
 export type SnapshotMeta = Record<string, SnapshotMetaValue>;
 
 /**
- * @alpha
+ * @public
  */
 export interface SnapshotState {
   ctx: SnapshotMeta;
@@ -49,7 +47,7 @@ export interface SnapshotState {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface SnapshotListener {
   key: string;
@@ -58,10 +56,11 @@ export interface SnapshotListener {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface SnapshotResult {
   state: SnapshotState;
+  funcs: string[];
   qrls: QRL[];
   objs: any[];
   resources: ResourceReturnInternal<any>[];
@@ -71,7 +70,7 @@ export interface SnapshotResult {
 export type ObjToProxyMap = WeakMap<any, any>;
 
 /**
- * @alpha
+ * @public
  */
 export interface PauseContext {
   getObject: GetObject;
@@ -80,7 +79,7 @@ export interface PauseContext {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface ContainerState {
   readonly $containerEl$: Element;
@@ -116,7 +115,6 @@ const CONTAINER_STATE = Symbol('ContainerState');
 export const _getContainerState = (containerEl: Element): ContainerState => {
   let set = (containerEl as any)[CONTAINER_STATE] as ContainerState;
   if (!set) {
-    assertTrue(!isServerPlatform(), 'Container state can only be created lazily on the browser');
     (containerEl as any)[CONTAINER_STATE] = set = createContainerState(
       containerEl,
       directGetAttribute(containerEl, 'q:base') ?? '/'
@@ -164,9 +162,7 @@ export const setRef = (value: any, elm: Element) => {
   if (isFunction(value)) {
     return value(elm);
   } else if (isObject(value)) {
-    if ('current' in value) {
-      return ((value as Ref<Element>).current = elm);
-    } else if ('value' in value) {
+    if ('value' in value) {
       return ((value as Signal<Element>).value = elm);
     }
   }

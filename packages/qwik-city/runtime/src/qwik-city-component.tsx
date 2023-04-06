@@ -2,7 +2,6 @@ import {
   $,
   component$,
   getLocale,
-  type JSXNode,
   noSerialize,
   Slot,
   useContextProvider,
@@ -47,26 +46,26 @@ import { useQwikCityEnv } from './use-functions';
 import { toPath } from './utils';
 
 /**
- * @alpha
+ * @public
  */
 export interface QwikCityProps {
-  /**
-   * The QwikCity component must have only two direct children: `<head>` and `<body>`, like the following example:
-   *
-   * ```tsx
-   * <QwikCityProvider>
-   *   <head>
-   *     <meta charSet="utf-8" />
-   *   </head>
-   *   <body lang="en"></body>
-   * </QwikCityProvider>
-   * ```
-   */
-  children?: [JSXNode, JSXNode];
+  // /**
+  //  * The QwikCity component must have only two direct children: `<head>` and `<body>`, like the following example:
+  //  *
+  //  * ```tsx
+  //  * <QwikCityProvider>
+  //  *   <head>
+  //  *     <meta charSet="utf-8" />
+  //  *   </head>
+  //  *   <body lang="en"></body>
+  //  * </QwikCityProvider>
+  //  * ```
+  //  */
+  // children?: [JSXNode, JSXNode];
 }
 
 /**
- * @alpha
+ * @public
  */
 export const QwikCityProvider = component$<QwikCityProps>(() => {
   const env = useQwikCityEnv();
@@ -82,9 +81,6 @@ export const QwikCityProvider = component$<QwikCityProps>(() => {
   const url = new URL(urlEnv);
   const routeLocation = useStore<MutableRouteLocation>({
     url,
-    href: url.href,
-    pathname: url.pathname,
-    query: url.searchParams,
     params: env.params,
     isNavigating: false,
   });
@@ -197,10 +193,7 @@ export const QwikCityProvider = component$<QwikCityProps>(() => {
 
         // Update route location
         routeLocation.url = url;
-        routeLocation.href = url.href;
-        routeLocation.pathname = url.pathname;
         routeLocation.params = { ...params };
-        routeLocation.query = url.searchParams;
 
         (navPath as any).untrackedValue = toPath(url);
 
@@ -243,19 +236,7 @@ export const QwikCityProvider = component$<QwikCityProps>(() => {
 });
 
 /**
- * @alpha
- * @deprecated - The "QwikCity" component has been renamed to "QwikCityProvider".
- */
-export const QwikCity = QwikCityProvider;
-
-/**
- * @alpha
- * @deprecated - The "Html" component has been renamed to "QwikCityProvider".
- */
-export const Html = QwikCityProvider;
-
-/**
- * @alpha
+ * @public
  */
 export interface QwikCityMockProps {
   url?: string;
@@ -263,16 +244,13 @@ export interface QwikCityMockProps {
 }
 
 /**
- * @alpha
+ * @public
  */
 export const QwikCityMockProvider = component$<QwikCityMockProps>((props) => {
   const urlEnv = props.url ?? 'http://localhost/';
   const url = new URL(urlEnv);
   const routeLocation = useStore<MutableRouteLocation>({
     url,
-    href: url.href,
-    pathname: url.pathname,
-    query: url.searchParams,
     params: props.params ?? {},
     isNavigating: false,
   });

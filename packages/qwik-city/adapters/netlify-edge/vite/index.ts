@@ -5,14 +5,13 @@ import { join } from 'node:path';
 import { basePathname } from '@qwik-city-plan';
 
 /**
- * @alpha
+ * @public
  */
 export function netlifyEdgeAdapter(opts: NetlifyEdgeAdapterOptions = {}): any {
   const env = process?.env;
   return viteAdapter({
     name: 'netlify-edge',
     origin: env?.ORIGIN ?? env?.URL ?? 'https://yoursitename.netlify.app',
-    staticGenerate: opts.staticGenerate,
     ssg: opts.ssg,
     staticPaths: opts.staticPaths,
     cleanStaticGenerated: true,
@@ -79,19 +78,7 @@ export function netlifyEdgeAdapter(opts: NetlifyEdgeAdapterOptions = {}): any {
 }
 
 /**
- * @alpha
- * @deprecated Use `netlifyEdgeAdapter` exported from `@builder.io/qwik-city/adapters/netlify-edge/vite` instead.
- */
-export const netifyEdgeAdapter = netlifyEdgeAdapter;
-
-/**
- * @alpha
- * @deprecated Use `netlifyEdgeAdapter` exported from `@builder.io/qwik-city/adapters/netlify-edge/vite` instead.
- */
-export const netifyEdgeAdaptor = netlifyEdgeAdapter;
-
-/**
- * @alpha
+ * @public
  */
 export interface NetlifyEdgeAdapterOptions extends ServerAdapterOptions {
   /**
@@ -111,12 +98,6 @@ export interface NetlifyEdgeAdapterOptions extends ServerAdapterOptions {
 }
 
 /**
- * @alpha
- * @deprecated Use `NetlifyEdgeAdapterOptions` instead.
- */
-export type NetlifyEdgeAdaptorOptions = NetlifyEdgeAdapterOptions;
-
-/**
- * @alpha
+ * @public
  */
 export type { StaticGenerateRenderOptions };

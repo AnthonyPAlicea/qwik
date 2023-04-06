@@ -16,14 +16,14 @@ import { QObjectManagerSymbol, _IMMUTABLE, _IMMUTABLE_PREFIX } from './constants
 import { _fnSignal } from '../qrl/inlined-fn';
 
 /**
- * @alpha
+ * @public
  */
 export interface Signal<T = any> {
   value: T;
 }
 
 /**
- * @alpha
+ * @public
  */
 export type ValueOrSignal<T> = T | Signal<T>;
 
@@ -80,11 +80,11 @@ export class SignalImpl<T> extends SignalBase implements Signal<T> {
   }
 
   get value() {
+    if (this[QObjectSignalFlags] & SIGNAL_UNASSIGNED) {
+      throw SignalUnassignedException;
+    }
     const sub = tryGetInvokeContext()?.$subscriber$;
     if (sub) {
-      if (this[QObjectSignalFlags] & SIGNAL_UNASSIGNED) {
-        throw SignalUnassignedException;
-      }
       this[QObjectManagerSymbol].$addSub$(sub);
     }
     return this.untrackedValue;
@@ -121,7 +121,7 @@ export class SignalImpl<T> extends SignalBase implements Signal<T> {
   }
 }
 
-export class SignalDerived<T = any, ARGS extends any[] = any> extends SignalBase {
+export class SignalDerived<T = any, ARGS extends any[] = any[]> extends SignalBase {
   constructor(public $func$: (...args: ARGS) => T, public $args$: ARGS, public $funcStr$?: string) {
     super();
   }
@@ -183,11 +183,7 @@ export const _wrapProp = <T extends Record<any, any>, P extends keyof T>(obj: T,
   if (isSignal(immutable)) {
     return immutable;
   }
-  const value = obj[prop];
-  if (isSignal(value)) {
-    return _IMMUTABLE;
-  }
-  return value;
+  return _IMMUTABLE;
 };
 
 /**

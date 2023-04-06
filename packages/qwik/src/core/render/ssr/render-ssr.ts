@@ -1,6 +1,6 @@
 import { isPromise, then } from '../../util/promises';
 import { type InvokeContext, newInvokeContext, invoke, trackSignal } from '../../use/use-core';
-import { createJSXError, isJSXNode, jsx } from '../jsx/jsx-runtime';
+import { Virtual, createJSXError, isJSXNode, jsx } from '../jsx/jsx-runtime';
 import { isArray, isFunction, isString, type ValueOrPromise } from '../../util/types';
 import type { JSXNode } from '../jsx/types/jsx-node';
 import {
@@ -16,7 +16,7 @@ import {
   stringifyStyle,
 } from '../execute-component';
 import { ELEMENT_ID, OnRenderProp, QScopedStyle, QSlot, QSlotS, QStyle } from '../../util/markers';
-import { InternalSSRStream, Virtual, SSRRaw, SSRHint } from '../jsx/utils.public';
+import { InternalSSRStream, SSRRaw, SSRHint } from '../jsx/utils.public';
 import { logError, logWarn } from '../../util/log';
 import {
   groupListeners,
@@ -55,14 +55,14 @@ import { _IMMUTABLE, _IMMUTABLE_PREFIX } from '../../state/constants';
 const FLUSH_COMMENT = '<!--qkssr-f-->';
 
 /**
- * @alpha
+ * @public
  */
 export type StreamWriter = {
   write: (chunk: string) => void;
 };
 
 /**
- * @alpha
+ * @public
  */
 export interface RenderSSROptions {
   containerTagName: string;
@@ -513,6 +513,43 @@ const renderNode = (
     if (qDev && props.class && props.className) {
       throw new TypeError('Can only have one of class or className');
     }
+    if (immutable) {
+      for (const prop of Object.keys(immutable)) {
+        let value = immutable[prop];
+        if (isOnProp(prop)) {
+          setEvent(elCtx.li, prop, value, undefined);
+          continue;
+        }
+        const attrName = processPropKey(prop);
+        if (isSignal(value)) {
+          assertDefined(hostCtx, 'Signals can not be used outside the root');
+          value = trackSignal(value, [1, elm, value, hostCtx.$element$, attrName]);
+          useSignal = true;
+        }
+        if (prop === 'dangerouslySetInnerHTML') {
+          htmlStr = value;
+          continue;
+        }
+        if (prop.startsWith(PREVENT_DEFAULT)) {
+          addQwikEvent(prop.slice(PREVENT_DEFAULT.length), rCtx.$static$.$containerState$);
+        }
+        const attrValue = processPropValue(attrName, value);
+        if (attrValue != null) {
+          if (attrName === 'class') {
+            classStr = attrValue;
+          } else if (attrName === 'value' && tagName === 'textarea') {
+            htmlStr = escapeHtml(attrValue);
+          } else if (isSSRUnsafeAttr(attrName)) {
+            if (qDev) {
+              logError('Attribute value is unsafe for SSR');
+            }
+          } else {
+            openingElement +=
+              ' ' + (value === '' ? attrName : attrName + '="' + escapeAttr(attrValue) + '"');
+          }
+        }
+      }
+    }
     for (const prop of Object.keys(props)) {
       let value = props[prop];
       if (prop === 'ref') {
@@ -553,43 +590,6 @@ const renderNode = (
         }
       }
     }
-    if (immutable) {
-      for (const prop of Object.keys(immutable)) {
-        let value = immutable[prop];
-        if (isOnProp(prop)) {
-          setEvent(elCtx.li, prop, value, undefined);
-          continue;
-        }
-        const attrName = processPropKey(prop);
-        if (isSignal(value)) {
-          assertDefined(hostCtx, 'Signals can not be used outside the root');
-          value = trackSignal(value, [1, elm, value, hostCtx.$element$, attrName]);
-          useSignal = true;
-        }
-        if (prop === 'dangerouslySetInnerHTML') {
-          htmlStr = value;
-          continue;
-        }
-        if (prop.startsWith(PREVENT_DEFAULT)) {
-          addQwikEvent(prop.slice(PREVENT_DEFAULT.length), rCtx.$static$.$containerState$);
-        }
-        const attrValue = processPropValue(attrName, value);
-        if (attrValue != null) {
-          if (attrName === 'class') {
-            classStr = attrValue;
-          } else if (attrName === 'value' && tagName === 'textarea') {
-            htmlStr = escapeHtml(attrValue);
-          } else if (isSSRUnsafeAttr(attrName)) {
-            if (qDev) {
-              logError('Attribute value is unsafe for SSR');
-            }
-          } else {
-            openingElement +=
-              ' ' + (value === '' ? attrName : attrName + '="' + escapeAttr(attrValue) + '"');
-          }
-        }
-      }
-    }
     const listeners = elCtx.li;
     if (hostCtx) {
       if (qDev) {
@@ -623,7 +623,7 @@ This goes against the HTML spec: https://html.spec.whatwg.org/multipage/dom.html
       } else {
         if (flags & IS_TABLE && !tableContent[tagName]) {
           throw createJSXError(
-            `The <table> element requires that its direct children to be '<tbody>' or '<thead>', instead, '<${tagName}>' was rendered.`,
+            `The <table> element requires that its direct children to be '<tbody>', '<thead>', '<tfoot>' or '<caption>' instead, '<${tagName}>' was rendered.`,
             node
           );
         }
@@ -1051,6 +1051,9 @@ const htmlContent: Record<string, true | undefined> = {
 const tableContent: Record<string, true | undefined> = {
   tbody: true,
   thead: true,
+  tfoot: true,
+  caption: true,
+  colgroup: true,
 };
 
 const headContent: Record<string, true | undefined> = {
@@ -1101,6 +1104,7 @@ const phasingContent: Record<string, true | undefined> = {
   meter: true,
   noscript: true,
   object: true,
+  option: true,
   output: true,
   picture: true,
   progress: true,

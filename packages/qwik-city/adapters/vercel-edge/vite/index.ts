@@ -4,13 +4,12 @@ import fs from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
- * @alpha
+ * @public
  */
 export function vercelEdgeAdapter(opts: VercelEdgeAdapterOptions = {}): any {
   return viteAdapter({
     name: 'vercel-edge',
     origin: process?.env?.VERCEL_URL || 'https://yoursitename.vercel.app',
-    staticGenerate: opts.staticGenerate,
     ssg: opts.ssg,
     staticPaths: opts.staticPaths,
     cleanStaticGenerated: true,
@@ -103,13 +102,7 @@ export function vercelEdgeAdapter(opts: VercelEdgeAdapterOptions = {}): any {
 }
 
 /**
- * @alpha
- * @deprecated Use `vercelEdgeAdapter` exported from `@builder.io/qwik-city/adapters/vercel-edge/vite` instead.
- */
-export const vercelEdgeAdaptor = vercelEdgeAdapter;
-
-/**
- * @alpha
+ * @public
  */
 export interface VercelEdgeAdapterOptions extends ServerAdapterOptions {
   /**
@@ -141,12 +134,6 @@ export interface VercelEdgeAdapterOptions extends ServerAdapterOptions {
 }
 
 /**
- * @alpha
- * @deprecated Please use `VercelEdgeAdapterOptions` instead.
- */
-export type VercelEdgeAdaptorOptions = VercelEdgeAdapterOptions;
-
-/**
- * @alpha
+ * @public
  */
 export type { StaticGenerateRenderOptions };

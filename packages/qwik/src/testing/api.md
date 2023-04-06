@@ -7,11 +7,11 @@
 import type { JSXNode } from '@builder.io/qwik/jsx-runtime';
 import { RenderResult } from '@builder.io/qwik';
 
-// @alpha
+// @public
 export const createDOM: () => Promise<{
     render: (jsxElement: JSXNode) => Promise<RenderResult>;
     screen: HTMLElement;
-    userEvent: (queryOrElement: string | Element | null, eventNameCamel: string) => Promise<void>;
+    userEvent: (queryOrElement: string | Element | null, eventNameCamel: string, eventPayload?: any) => Promise<void>;
 }>;
 
 // (No @packageDocumentation comment for this package)

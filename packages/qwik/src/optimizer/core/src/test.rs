@@ -568,20 +568,82 @@ fn example_use_optimization() {
 import { $, component$, useTask$ } from '@builder.io/qwik';
 import { CONST } from 'const';
 export const Works = component$((props) => {
-    const {value} = useSignal(0);
-    const {foo, ...rest} = useStore({foo: 0});
-    const {bar = 'hello', ...rest2} = useStore({foo: 0});
-    const {hello} = props;
-    const { translations = {} } = props;
-    const { buttonText = 'Search' } = translations;
+    const {countNested} = useStore({value:{count:0}}).value;
+    const countNested2 = countNested;
+    const {hello} = countNested2;
+    const bye = hello.bye;
+    const {ciao} = bye.italian;
+
 
     return (
-        <div hello={hello} some={value} bar={bar} rest={rest} rest2={rest2} buttonText={buttonText}>{foo}</div>
+        <div ciao={ciao} >{foo}</div>
     );
 });
 "#
         .to_string(),
-        transpile_jsx: true,
+        transpile_jsx: false,
+        entry_strategy: EntryStrategy::Inline,
+        transpile_ts: true,
+        is_server: Some(false),
+        ..TestInput::default()
+    });
+}
+
+#[test]
+fn example_optimization_issue_3561() {
+    test_input!(TestInput {
+        code: r#"
+import { component$ } from '@builder.io/qwik';
+
+export const Issue3561 = component$(() => {
+    const props = useStore({
+      product: {
+        currentVariant: {
+          variantImage: 'image',
+          variantNumber: 'number',
+          setContents: 'contents',
+        },
+      },
+    });
+    const {
+      currentVariant: { variantImage, variantNumber, setContents } = {},
+    } = props.product;
+
+    console.log(variantImage, variantNumber, setContents)
+
+    return <p></p>;
+  });
+"#
+        .to_string(),
+        transpile_jsx: false,
+        entry_strategy: EntryStrategy::Inline,
+        transpile_ts: true,
+        is_server: Some(false),
+        ..TestInput::default()
+    });
+}
+
+#[test]
+fn example_optimization_issue_3542() {
+    test_input!(TestInput {
+        code: r#"
+import { component$ } from '@builder.io/qwik';
+
+export const AtomStatus = component$(({ctx,atom})=>{
+    let status = atom.status;
+    if(!atom.real) {
+        status="WILL-VANISH"
+    } else if (JSON.stringify(atom.atom)==JSON.stringify(atom.real)) {
+        status="WTFED"
+    }
+    return (
+        <span title={atom.ID} onClick$={(ev)=>atomStatusClick(ctx,ev,[atom])} class={["atom",status,ctx.store[atom.ID]?"selected":null]}>
+        </span>
+    );
+})
+"#
+        .to_string(),
+        transpile_jsx: false,
         entry_strategy: EntryStrategy::Inline,
         transpile_ts: true,
         is_server: Some(false),
@@ -1756,8 +1818,10 @@ export const Greeter = component$(() => {
 });
 "#
         .to_string(),
+        entry_strategy: EntryStrategy::Inline,
         transpile_ts: true,
         transpile_jsx: true,
+        mode: EmitMode::Prod,
         ..TestInput::default()
     });
 }
@@ -1864,6 +1928,7 @@ import { component$, useStore, $ } from '@builder.io/qwik';
 import importedValue from 'v';
 
 export const App = component$((props) => {
+    const {Model} = props;
     const state = useStore({count: 0});
     const remove = $((id: number) => {
         const d = state.data;
@@ -1890,7 +1955,7 @@ export const App = component$((props) => {
                 <p>Hello Qwik</p>
             </Div>
             [].map(() => (
-                <Div
+                <Model
                     class={state}
                     remove$={remove}
                     mutable1={{
@@ -2319,6 +2384,38 @@ export const App = component$((props: Stuff) => {
 }
 
 #[test]
+fn example_class_name() {
+    test_input!(TestInput {
+        code: r#"
+import { component$ } from '@builder.io/qwik';
+
+export const App2 = component$(() => {
+    const signal = useSignal();
+    const computed = signal.value + 'foo';
+    return (
+        <>
+            <div className="hola"></div>
+            <div className={signal.value}></div>
+            <div className={signal}></div>
+            <div className={computed}></div>
+
+            <Foo className="hola"></Foo>
+            <Foo className={signal.value}></Foo>
+            <Foo className={signal}></Foo>
+            <Foo className={computed}></Foo>
+        </>
+    );
+});
+"#
+        .to_string(),
+        transpile_ts: true,
+        transpile_jsx: true,
+        explicit_extensions: true,
+        ..TestInput::default()
+    });
+}
+
+#[test]
 fn example_preserve_filenames() {
     test_input!(TestInput {
         code: r#"
@@ -2480,6 +2577,15 @@ fn example_derived_signals_children() {
 import { component$, useStore, mutable } from '@builder.io/qwik';
 
 import {dep} from './file';
+
+export const TextContent = component$((props) => {
+    return (
+        <>
+            <div>data-nu: {props['data-nu']}</div>
+            <div>class: {props.class}</div>
+        </>
+    );
+});
 
 export const App = component$(() => {
     const signal = useSignal(0);

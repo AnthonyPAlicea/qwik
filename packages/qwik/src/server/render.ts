@@ -25,7 +25,7 @@ const DOCTYPE = '<!DOCTYPE html>';
  * Creates a server-side `document`, renders to root node to the document,
  * then serializes the document to a string.
  *
- * @alpha
+ * @public
  *
  */
 export async function renderToStream(
@@ -144,7 +144,7 @@ export async function renderToStream(
     stream,
     containerTagName,
     containerAttributes,
-    serverData: opts.serverData ?? opts.envData,
+    serverData: opts.serverData,
     base: buildBase,
     beforeContent,
     beforeClose: async (contexts, containerState, dynamic) => {
@@ -162,6 +162,15 @@ export async function renderToStream(
           nonce: opts.serverData?.nonce,
         }),
       ];
+      if (snapshotResult.funcs.length > 0) {
+        children.push(
+          jsx('script', {
+            'q:func': 'qwik/json',
+            dangerouslySetInnerHTML: serializeFunctions(snapshotResult.funcs),
+            nonce: opts.serverData?.nonce,
+          })
+        );
+      }
 
       if (opts.prefetchStrategy !== null) {
         // skip prefetch implementation if prefetchStrategy === null
@@ -245,7 +254,7 @@ export async function renderToStream(
  * Creates a server-side `document`, renders to root node to the document,
  * then serializes the document to a string.
  *
- * @alpha
+ * @public
  *
  */
 export async function renderToString(
@@ -269,7 +278,7 @@ export async function renderToString(
 }
 
 /**
- * @alpha
+ * @public
  */
 export function resolveManifest(
   manifest: QwikManifest | ResolvedManifest | undefined
@@ -316,4 +325,8 @@ function normalizeOptions<T extends RenderOptions>(opts: T | undefined): T {
     }
   }
   return normalizedOpts;
+}
+
+function serializeFunctions(funcs: string[]) {
+  return `document.currentScript.qFuncs=[${funcs.join(',\n')}]`;
 }

@@ -10,7 +10,6 @@ import {
   useContext,
   useStyles$,
   type ResourceReturn,
-  mutable,
 } from '@builder.io/qwik';
 
 export interface WeatherData {
@@ -46,7 +45,7 @@ export const ResourceApp = component$(() => {
 
   useTask$(async ({ track }) => {
     logs.content += '[WATCH] 1 before\n';
-    const count = track(state, 'count');
+    const count = track(() => state.count);
     await delay(100);
     state.countDouble = count * 2;
     logs.content += '[WATCH] 1 after\n';
@@ -97,7 +96,7 @@ export const Results = component$((props: { result: ResourceReturn<number> }) =>
     }`);
   const logs = useContext(LOGS);
   logs.content += '[RENDER] <Results>\n\n\n';
-  const logscontent = logs.content;
+  const logscontent = logs.content + '';
 
   const state = useStore({
     count: 0,
@@ -127,6 +126,9 @@ export const Results = component$((props: { result: ResourceReturn<number> }) =>
   );
 });
 
+export function mutable(value: any) {
+  return value;
+}
 export function delay(nu: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, nu);

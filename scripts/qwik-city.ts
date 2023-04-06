@@ -22,7 +22,7 @@ export async function buildQwikCity(config: BuildConfig) {
     buildAdapterAzureSwaVite(config, inputDir, outputDir),
     buildAdapterCloudflarePagesVite(config, inputDir, outputDir),
     buildAdapterCloudRunVite(config, inputDir, outputDir),
-    buildAdapterExpressVite(config, inputDir, outputDir),
+    buildAdapterNodeServerVite(config, inputDir, outputDir),
     buildAdapterNetlifyEdgeVite(config, inputDir, outputDir),
     buildAdapterSharedVite(config, inputDir, outputDir),
     buildAdapterStaticVite(config, inputDir, outputDir),
@@ -67,10 +67,10 @@ export async function buildQwikCity(config: BuildConfig) {
         import: './adapters/cloud-run/vite/index.mjs',
         require: './adapters/cloud-run/vite/index.cjs',
       },
-      './adapters/express/vite': {
-        types: './adapters/express/vite/index.d.ts',
-        import: './adapters/express/vite/index.mjs',
-        require: './adapters/express/vite/index.cjs',
+      './adapters/node-server/vite': {
+        types: './adapters/node-server/vite/index.d.ts',
+        import: './adapters/node-server/vite/index.mjs',
+        require: './adapters/node-server/vite/index.cjs',
       },
       './adapters/netlify-edge/vite': {
         types: './adapters/netlify-edge/vite/index.d.ts',
@@ -92,49 +92,6 @@ export async function buildQwikCity(config: BuildConfig) {
         import: './adapters/vercel-edge/vite/index.mjs',
         require: './adapters/vercel-edge/vite/index.cjs',
       },
-
-      // start deprecated
-      './adaptors/azure-swa/vite': {
-        types: './adapters/azure-swa/vite/index.d.ts',
-        import: './adapters/azure-swa/vite/index.mjs',
-        require: './adapters/azure-swa/vite/index.cjs',
-      },
-      './adaptors/cloudflare-pages/vite': {
-        types: './adapters/cloudflare-pages/vite/index.d.ts',
-        import: './adapters/cloudflare-pages/vite/index.mjs',
-        require: './adapters/cloudflare-pages/vite/index.cjs',
-      },
-      './adaptors/cloud-run/vite': {
-        types: './adapters/cloud-run/vite/index.d.ts',
-        import: './adapters/cloud-run/vite/index.mjs',
-        require: './adapters/cloud-run/vite/index.cjs',
-      },
-      './adaptors/express/vite': {
-        types: './adapters/express/vite/index.d.ts',
-        import: './adapters/express/vite/index.mjs',
-        require: './adapters/express/vite/index.cjs',
-      },
-      './adaptors/netlify-edge/vite': {
-        types: './adapters/netlify-edge/vite/index.d.ts',
-        import: './adapters/netlify-edge/vite/index.mjs',
-        require: './adapters/netlify-edge/vite/index.cjs',
-      },
-      './adaptors/shared/vite': {
-        types: './adapters/shared/vite/index.d.ts',
-        import: './adapters/shared/vite/index.mjs',
-        require: './adapters/shared/vite/index.cjs',
-      },
-      './adaptors/static/vite': {
-        types: './adapters/static/vite/index.d.ts',
-        import: './adapters/static/vite/index.mjs',
-        require: './adapters/static/vite/index.cjs',
-      },
-      './adaptors/vercel-edge/vite': {
-        types: './adapters/vercel-edge/vite/index.d.ts',
-        import: './adapters/vercel-edge/vite/index.mjs',
-        require: './adapters/vercel-edge/vite/index.cjs',
-      },
-      // end deprecated
       './middleware/azure-swa': {
         types: './middleware/azure-swa/index.d.ts',
         import: './middleware/azure-swa/index.mjs',
@@ -401,12 +358,16 @@ async function buildAdapterCloudRunVite(config: BuildConfig, inputDir: string, o
   });
 }
 
-async function buildAdapterExpressVite(config: BuildConfig, inputDir: string, outputDir: string) {
-  const entryPoints = [join(inputDir, 'adapters', 'express', 'vite', 'index.ts')];
+async function buildAdapterNodeServerVite(
+  config: BuildConfig,
+  inputDir: string,
+  outputDir: string
+) {
+  const entryPoints = [join(inputDir, 'adapters', 'node-server', 'vite', 'index.ts')];
 
   await build({
     entryPoints,
-    outfile: join(outputDir, 'adapters', 'express', 'vite', 'index.mjs'),
+    outfile: join(outputDir, 'adapters', 'node-server', 'vite', 'index.mjs'),
     bundle: true,
     platform: 'node',
     target: nodeTarget,
@@ -418,7 +379,7 @@ async function buildAdapterExpressVite(config: BuildConfig, inputDir: string, ou
 
   await build({
     entryPoints,
-    outfile: join(outputDir, 'adapters', 'express', 'vite', 'index.cjs'),
+    outfile: join(outputDir, 'adapters', 'node-server', 'vite', 'index.cjs'),
     bundle: true,
     platform: 'node',
     target: nodeTarget,

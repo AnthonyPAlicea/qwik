@@ -52,8 +52,12 @@ const _verifySerializable = <T>(value: T, seen: Set<any>, ctx: string, preMessag
     const typeObj = typeof unwrapped;
     switch (typeObj) {
       case 'object':
-        if (isPromise(unwrapped)) return value;
-        if (isNode(unwrapped)) return value;
+        if (isPromise(unwrapped)) {
+          return value;
+        }
+        if (isNode(unwrapped)) {
+          return value;
+        }
         if (isArray(unwrapped)) {
           let expectIndex = 0;
           // Make sure the array has no holes
@@ -161,23 +165,6 @@ export const _weakSerialize = <T extends Record<string, any>>(input: T): Partial
   return input as any;
 };
 
-/**
- * @alpha
- * @deprecated Remove it, not needed anymore
- */
-export const mutable = <T>(v: T): T => {
-  console.warn(
-    'mutable() is deprecated, you can safely remove all usages of mutable() in your code'
-  );
-  return v;
-};
-
-/**
- * @internal
- * @deprecated Remove it, not needed anymore
- */
-export const _useMutableProps = () => {};
-
 export const isConnected = (sub: SubscriberEffect | SubscriberHost): boolean => {
   if (isSubscriberDescriptor(sub)) {
     return isConnected(sub.$el$);
@@ -187,7 +174,7 @@ export const isConnected = (sub: SubscriberEffect | SubscriberHost): boolean => 
 };
 
 /**
- * @alpha
+ * @public
  */
 export const unwrapProxy = <T>(proxy: T): T => {
   return isObject(proxy) ? getProxyTarget<any>(proxy) ?? proxy : proxy;
@@ -246,7 +233,7 @@ export const serializeSubscription = (sub: Subscriptions, getObjId: GetObjID) =>
   let base = type + ' ' + host;
   if (type === 0) {
     if (sub[2]) {
-      base += ' ' + sub[2];
+      base += ' ' + encodeURI(sub[2]);
     }
   } else if (type <= 2) {
     base += ` ${must(getObjId(sub[2]))} ${must(getObjId(sub[3]))} ${sub[4]}`;
@@ -272,7 +259,7 @@ export const parseSubscription = (sub: string, getObject: GetObject): Subscripti
   const subscription = [type, host];
   if (type === 0) {
     assertTrue(parts.length <= 3, 'Max 3 parts');
-    subscription.push(parts[2]);
+    subscription.push(parts.length === 3 ? decodeURI(parts[parts.length - 1]) : undefined);
   } else if (type <= 2) {
     assertTrue(parts.length === 5, 'Type 1 has 5');
     subscription.push(getObject(parts[2]), getObject(parts[3]), parts[4], parts[5]);

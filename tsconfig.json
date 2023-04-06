@@ -3,7 +3,7 @@
     "incremental": true,
     "target": "ES2020",
     "module": "ES2020",
-    "lib": ["es2020", "DOM", "webworker"],
+    "lib": ["es2021", "DOM", "webworker"],
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@builder.io/qwik",
@@ -35,8 +35,8 @@
       "@builder.io/qwik-city/adapters/cloudflare-pages/vite": [
         "packages/qwik-city/adapters/cloudflare-pages/vite/index.ts"
       ],
-      "@builder.io/qwik-city/adapters/express/vite": [
-        "packages/qwik-city/adapters/express/vite/index.ts"
+      "@builder.io/qwik-city/adapters/node-server/vite": [
+        "packages/qwik-city/adapters/node-server/vite/index.ts"
       ],
       "@builder.io/qwik-city/adapters/netlify-edge/vite": [
         "packages/qwik-city/adapters/netlify-edge/vite/index.ts"
@@ -84,7 +84,7 @@
   },
   "include": [
     "packages/create-qwik",
-    // "packages/docs",
+    "packages/docs",
     "packages/qwik/src",
     "packages/qwik-city",
     "packages/qwik-auth",
@@ -95,11 +95,5 @@
     "starters/dev-server.ts",
     "packages/qwik-react/vite"
   ],
-  "exclude": [
-    "packages/create-qwik/dist",
-    "packages/docs/dist",
-    "packages/docs/server",
-    "**/lib",
-    "packages/qwik/**/*.d.ts"
-  ]
+  "exclude": ["packages/create-qwik/dist", "**/lib", "packages/qwik/**/*.d.ts"]
 }

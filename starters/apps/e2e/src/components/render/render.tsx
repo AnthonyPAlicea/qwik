@@ -6,10 +6,24 @@ import {
   useStore,
   useStylesScoped$,
   useTask$,
+  event$,
+  h,
+  jsx,
 } from '@builder.io/qwik';
 import { delay } from '../streaming/demo';
 
 export const Render = component$(() => {
+  const rerender = useSignal(0);
+  return (
+    <>
+      <button id="rerender" onClick$={() => rerender.value++}>
+        Rerender
+      </button>
+      <RenderChildren key={rerender.value} />
+    </>
+  );
+});
+export const RenderChildren = component$(() => {
   const parent = {
     counter: {
       count: 0,
@@ -60,6 +74,14 @@ export const Render = component$(() => {
       <Issue2414 />
       <Issue3178 />
       <Issue3398 />
+      <Issue3479 />
+      <Issue3481 />
+      <Issue3468 />
+      <Pr3475 />
+      <Issue3561 />
+      <Issue3542 atom={{ code: 1 }} />
+      <Issue3643 />
+      <IssueChildrenSpread />
     </>
   );
 });
@@ -189,7 +211,7 @@ export const PropsDestructuring = component$(
       }
     );
     renders.renders++;
-    const rerenders = renders.renders;
+    const rerenders = renders.renders + 0;
 
     return (
       <div id={id}>
@@ -211,7 +233,7 @@ export const PropsDestructuringNo = component$(
       }
     );
     renders.renders++;
-    const rerenders = renders.renders;
+    const rerenders = renders.renders + 0;
     return (
       <div id={id}>
         <span {...rest}>
@@ -387,6 +409,8 @@ const Issue2414 = component$(() => {
     <>
       <p>Should be currently sorted by: {sort.value}</p>
       <table>
+        <caption>Hello</caption>
+        <colgroup></colgroup>
         <thead>
           {(['size', 'age', 'id'] as const).map((c) => {
             return (
@@ -417,6 +441,11 @@ const Issue2414 = component$(() => {
         ) : (
           <></>
         )}
+        <tfoot>
+          <tr>
+            <td colSpan={3}>{table.value === undefined ? '' : table.value.length}</td>
+          </tr>
+        </tfoot>
       </table>
     </>
   );
@@ -466,6 +495,167 @@ export const Issue3398 = component$(() => {
         Toggle tag
       </button>
       <Title tag={tag.value}></Title>
+    </div>
+  );
+});
+
+export const Issue3479 = component$(() => {
+  const count = useSignal(0);
+  const attributes = {
+    onClick$: event$(() => count.value++),
+  };
+  const countStr = String(count.value) + '';
+  return (
+    <div>
+      <button id="issue-3479-button" {...attributes}>
+        Increment
+      </button>
+      <div id="issue-3479-result">{countStr}</div>
+    </div>
+  );
+});
+
+export const Issue3481 = component$(() => {
+  useStylesScoped$(`
+    .from-static {
+      color: red;
+    }
+    .from-attr {
+      color: blue;
+    }
+  `);
+  const attr: Record<string, string> = {
+    class: 'from-attr',
+  };
+  const count = useSignal(0);
+  const countStr = String(count.value) + '';
+  return (
+    <>
+      <button id="issue-3481-button" onClick$={() => count.value++}>
+        Rerender
+      </button>
+      <div id="issue-3481-result1" class="from-static" {...attr}>
+        Hello {countStr}
+      </div>
+      <div id="issue-3481-result2" {...attr} class="from-static">
+        Hello {countStr}
+      </div>
+    </>
+  );
+});
+
+const DATA = [{ name: 'a' }, { name: 'b' }, { name: 'c' }, { name: 'd' }];
+
+export const Card = component$((props: any) => {
+  return (
+    <div class="issue-3468-card">
+      {props.name}:{props.key}
+    </div>
+  );
+});
+
+export const Issue3468 = component$(() => {
+  return (
+    <>
+      {DATA.map((post) => (
+        <Card {...post} key={post.name} />
+      ))}
+    </>
+  );
+});
+
+export const Pr3475 = component$(() =>
+  ((store) => (
+    <button id="pr-3475-button" onClick$={() => delete store.key}>
+      {store.key}
+    </button>
+  ))(useStore<{ key?: string }>({ key: 'data' }))
+);
+
+export const Issue3561 = component$(() => {
+  const props = useStore({
+    product: {
+      currentVariant: {
+        variantImage: 'image',
+        variantNumber: 'number',
+        setContents: 'contents',
+      },
+    },
+  });
+  const { currentVariant: { variantImage, variantNumber, setContents } = {} } = props.product;
+
+  return (
+    <div>
+      <div>
+        <div>{variantImage}</div>
+      </div>
+      <div>
+        <div>{variantNumber}</div>
+      </div>
+      <div>
+        <div>{setContents}</div>
+      </div>
+    </div>
+  );
+});
+
+export const Issue3542 = component$(({ atom }: any) => {
+  let status = atom.status;
+  if (atom.code === 1) {
+    status = 'CODE IS 1';
+  }
+  return <span id="issue-3542-result">{status}</span>;
+});
+
+export const Issue3643 = component$(() => {
+  const toggle = useSignal(false);
+  return (
+    <div>
+      <button id="issue-3643-button" onClick$={() => (toggle.value = !toggle.value)}>
+        Toggle
+      </button>
+      <div id="issue-3643-result">
+        {toggle.value ? h('div', {}, 'World') : h('div', { dangerouslySetInnerHTML: 'Hello' })}
+      </div>
+      <div id="issue-3643-result-2">
+        {toggle.value
+          ? jsx('div', { children: 'World' })
+          : jsx('div', { dangerouslySetInnerHTML: 'Hello' })}
+      </div>
+    </div>
+  );
+});
+
+function Hola(props: any) {
+  return <div {...props}></div>;
+}
+
+export const IssueChildrenSpread = component$(() => {
+  const signal = useSignal({
+    type: 'div',
+    children: ['Hello'],
+  });
+  const Type = signal.value.type;
+  return (
+    <div>
+      <button
+        id="issue-children-spread-button"
+        onClick$={() => {
+          signal.value = {
+            type: 'div',
+            children: ['Changed'],
+          };
+        }}
+      >
+        Change
+      </button>
+      <Hola id="issue-children-spread-static">
+        <div>1</div>
+        <div>2</div>
+      </Hola>
+      <div id="issue-children-spread-result">
+        <Type {...signal.value}></Type>
+      </div>
     </div>
   );
 });
