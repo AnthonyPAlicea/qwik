@@ -6,6 +6,7 @@ import { partytownVite } from '@builder.io/partytown/utils';
 import { examplesData, playgroundData, tutorialData } from './vite.repl-apps';
 import { sourceResolver } from './vite.source-resolver';
 import rehypePrettyCode from 'rehype-pretty-code';
+import { qwikReact } from '@builder.io/qwik-react/vite';
 
 export default defineConfig(() => {
   const routesDir = resolve('src', 'routes');
@@ -21,6 +22,7 @@ export default defineConfig(() => {
         'algoliasearch/dist/algoliasearch-lite.esm.browser',
       ],
     },
+
     plugins: [
       qwikCity({
         mdxPlugins: {
@@ -91,11 +93,9 @@ export default defineConfig(() => {
       playgroundData(routesDir),
       tutorialData(routesDir),
       sourceResolver(resolve('.')),
+      qwikReact(),
     ],
     clearScreen: false,
-    optimizeDeps: {
-      force: true,
-    },
     server: {
       port: 3000,
     },

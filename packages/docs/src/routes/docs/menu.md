@@ -14,7 +14,6 @@
 - [Events](/docs/(qwik)/components/events/index.mdx)
 - [Tasks & Lifecycle](/docs/(qwik)/components/tasks/index.mdx)
 - [Context](/docs/(qwik)/components/context/index.mdx)
-- [Resource](/docs/(qwik)/components/resource/index.mdx)
 - [Slots](/docs/(qwik)/components/slots/index.mdx)
 - [Rendering](/docs/(qwik)/components/rendering/index.mdx)
 - [Styling](/docs/(qwik)/components/styles/index.mdx)
@@ -31,12 +30,33 @@
 - [server$](/docs/(qwikcity)/server$/index.mdx)
 - [API reference](/docs/(qwikcity)/api/index.mdx)
 
+## Integrations
+
+- [Overview](integrations/index.mdx)
+- [Partytown](integrations/partytown/index.mdx)
+- [Playwright](integrations/playwright/index.mdx)
+- [PostCSS](integrations/postcss/index.mdx)
+- [React](integrations/react/index.mdx)
+- [Styled Vanilla Extract](integrations/styled-vanilla-extract/index.mdx)
+- [Tailwind](integrations/tailwind/index.mdx)
+- [Vitest](integrations/vitest/index.mdx)
+
+## Deployments
+
+- [Overview](deployments/index.mdx)
+- [Azure SWA](deployments/azure-swa/index.mdx)
+- [Cloudflare Pages](deployments/cloudflare-pages/index.mdx)
+- [Google Cloud Run](deployments/gcp-cloud-run/index.mdx)
+- [Netlify Edge](deployments/netlify-edge/index.mdx)
+- [Node](deployments/node/index.mdx)
+- [Vercel Edge](deployments/vercel-edge/index.mdx)
+
 ## Guides
 
 - [Qwik in a nutshell](/docs/(qwikcity)/guides/qwik-nutshell/index.mdx)
 - [Markdown & MDX](/docs/(qwikcity)/guides/mdx/index.mdx)
 - [SSG](/docs/(qwikcity)/guides/static-site-generation/index.mdx)
-- [React Cheat Sheet](/docs/(qwikcity)/guides/qwik-react/index.mdx)
+- [React Cheat Sheet](/docs/(qwikcity)/guides/react-cheat-sheet/index.mdx)
 - [Best Practices](/docs/(qwikcity)/guides/best-practices/index.mdx)
 
 ## Concepts
@@ -67,3 +87,5 @@
 - [GitHub](https://github.com/BuilderIO/qwik)
 - [@QwikDev](https://twitter.com/QwikDev)
 - [Discord](https://qwik.builder.io/chat)
+- [Community Projects](/community/projects/index.mdx)
+- [Values](/community/values/index.mdx)
