@@ -31,6 +31,17 @@ export async function runBuildCommand(app: AppCommand) {
   const runSsgScript = getScript('ssg');
   const buildTypes = getScript('build.types');
   const lint = getScript('lint');
+  const mode = app.getArg('mode');
+
+  const prebuildScripts = Object.keys(pkgJsonScripts)
+    .filter(s => s.startsWith('prebuild.'))
+    .map(getScript)
+    .filter(isString);
+
+  const postbuildScripts = Object.keys(pkgJsonScripts)
+    .filter(s => s.startsWith('postbuild.'))
+    .map(getScript)
+    .filter(isString);
 
   const scripts = [
     buildTypes,
@@ -40,7 +51,7 @@ export async function runBuildCommand(app: AppCommand) {
     buildServerScript,
     buildStaticScript,
     lint,
-  ].filter((s) => typeof s === 'string' && s.trim().length > 0)!;
+  ].filter(isString);
 
   if (!isLibraryBuild && !buildClientScript) {
     console.log(pkgJsonScripts);
@@ -54,12 +65,34 @@ export async function runBuildCommand(app: AppCommand) {
   }
 
   console.log(``);
+  for (const script of prebuildScripts) {
+    console.log(dim(script!));
+  }
   for (const script of scripts) {
+    console.log(dim(script!));
+  }
+  for (const script of postbuildScripts) {
     console.log(dim(script!));
   }
   console.log(``);
 
   let typecheck: Promise<Step> | null = null;
+
+  for (const script of prebuildScripts) {
+    try {
+      await execaCommand(script, {
+        cwd: app.rootDir,
+        stdout: 'inherit',
+        stderr: 'inherit',
+        env: {
+          FORCE_COLOR: 'true',
+        },
+      });
+    } catch (e) {
+      console.error(script, 'failed');
+      process.exit(1);
+    }
+  }
 
   if (buildTypes) {
     let copyScript = buildTypes;
@@ -68,6 +101,8 @@ export async function runBuildCommand(app: AppCommand) {
       copyScript += ' --pretty';
     }
     typecheck = execaCommand(copyScript, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
     })
     .then(() => ({
@@ -84,8 +119,10 @@ export async function runBuildCommand(app: AppCommand) {
   }
 
   if (buildClientScript) {
-    await execaCommand(buildClientScript, {
-      stdio: 'inherit',
+    const script = attachArg(buildClientScript, 'mode', mode);
+    await execaCommand(script, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
     }).catch(() => {
       process.exit(1);
@@ -98,7 +135,10 @@ export async function runBuildCommand(app: AppCommand) {
   const step2: Promise<Step>[] = [];
 
   if (buildLibScript) {
-    const libBuild = execaCommand(buildLibScript, {
+    const script = attachArg(buildLibScript, 'mode', mode);
+    const libBuild = execaCommand(script, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
       env: {
         FORCE_COLOR: 'true',
@@ -122,7 +162,10 @@ export async function runBuildCommand(app: AppCommand) {
   }
 
   if (buildPreviewScript) {
-    const previewBuild = execaCommand(buildPreviewScript, {
+    const script = attachArg(buildPreviewScript, 'mode', mode);
+    const previewBuild = execaCommand(script, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
       env: {
         FORCE_COLOR: 'true',
@@ -146,7 +189,10 @@ export async function runBuildCommand(app: AppCommand) {
   }
 
   if (buildServerScript) {
-    const serverBuild = execaCommand(buildServerScript, {
+    const script = attachArg(buildServerScript, 'mode', mode);
+    const serverBuild = execaCommand(script, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
       env: {
         FORCE_COLOR: 'true',
@@ -171,6 +217,8 @@ export async function runBuildCommand(app: AppCommand) {
 
   if (buildStaticScript) {
     const staticBuild = execaCommand(buildStaticScript, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
       env: {
         FORCE_COLOR: 'true',
@@ -199,6 +247,8 @@ export async function runBuildCommand(app: AppCommand) {
 
   if (lint) {
     const lintBuild = execaCommand(lint, {
+      stdout: 'inherit',
+      stderr: 'inherit',
       cwd: app.rootDir,
       env: {
         FORCE_COLOR: 'true',
@@ -209,11 +259,8 @@ export async function runBuildCommand(app: AppCommand) {
     }))
     .catch((e) => {
       console.log(``);
-      if (e.stderr) {
-        console.log(e.stderr);
-      } else {
-        console.log(e.stdout);
-      }
+      console.log(e.stdout);
+      console.error(e.stderr);
       console.log(``);
       process.exit(1);
     });
@@ -241,7 +288,9 @@ export async function runBuildCommand(app: AppCommand) {
 
       if (isPreviewBuild && buildStaticScript && runSsgScript) {
         return execaCommand(buildStaticScript, {
-          cwd: app.rootDir,
+          stdout: 'inherit',
+          stderr: 'inherit',
+              cwd: app.rootDir,
           env: {
             FORCE_COLOR: 'true',
           },
@@ -259,6 +308,32 @@ export async function runBuildCommand(app: AppCommand) {
     });
   }
 
+  for (const script of postbuildScripts) {
+    try {
+      await execaCommand(script, {
+        stdout: 'inherit',
+        stderr: 'inherit',
+        cwd: app.rootDir,
+        env: {
+          FORCE_COLOR: 'true',
+        },
+      });
+    } catch (e) {
+      console.error(script, 'failed');
+      process.exit(1);
+    }
+  }
+
   console.log(``);
 }
 
+function attachArg(command: string, key: string, value?: string): string {
+  if (value !== undefined) {
+    return `${command} --${key} ${value}`;
+  }
+  return command
+}
+
+function isString(s: string | null | undefined): s is string {
+  return typeof s === 'string' && s.trim().length > 0;
+}

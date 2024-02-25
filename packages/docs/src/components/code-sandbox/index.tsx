@@ -21,6 +21,7 @@ export default component$<{
         <div class="tabs">
           {tabs.map((tab, idx) => (
             <span
+              key={idx}
               onClick$={() => (activeTab.value = idx)}
               class={{ tab: true, active: idx == activeTab.value }}
             >
@@ -32,7 +33,7 @@ export default component$<{
       <div
         class="overflow-auto slot-container mb-4"
         style={{
-          maxHeight: maxHeight ? maxHeight + 'px' : 'none',
+          '--pretty-code-fragment-max-height': maxHeight ? maxHeight + 'px' : 'none',
         }}
       >
         <Slot name={tabs ? String(activeTab.value) : ''} />
@@ -62,7 +63,7 @@ export default component$<{
           <ul>
             <li class="edit">
               <a
-                href={examplePath(exampleUrl)}
+                href={'https://github.com/BuilderIO/qwik/blob/main/packages/docs/' + (url || src)}
                 rel="noopener"
                 target="_blank"
                 title="edit this snippet"
@@ -102,7 +103,7 @@ function examplePath(
     .replace('/(qwik)/', '/')
     .replace('/(qwikcity)/', '/')
     .replace('/src/routes/demo', '/demo')
-    .replace(/\/[\w\d]+.tsx?/, '/');
+    .replace(/\/[\w\d]+\.tsx?$/, '/');
 
   if (!includeTheme) {
     return newPath;

@@ -1,51 +1,30 @@
 /* eslint-disable no-console */
 import type { Rule } from 'eslint';
 import type { CallExpression } from 'estree';
+import type { QwikEslintExamples } from '../examples';
+
 export const useMethodUsage: Rule.RuleModule = {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Object destructuring is not recommended for component$',
+      description: 'Detect invalid use of use hooks.',
       category: 'Variables',
       recommended: true,
-      url: 'https://github.com/BuilderIO/qwik',
+      url: 'https://qwik.builder.io/docs/advanced/eslint/#use-method-usage',
     },
     messages: {
-      'use-after-await': 'Calling use* methods after await is not safe.',
-      'use-wrong-function': 'Calling use* methods in wrong function.',
-      'use-not-root': 'Calling use* methods in non-root component.',
+      useWrongFunction: 'Calling use* methods in wrong function.',
     },
   },
   create(context) {
-    const modifyJsxSource = context
-      .getSourceCode()
+    const modifyJsxSource = context.sourceCode
       .getAllComments()
       .some((c) => c.value.includes('@jsxImportSource'));
     if (modifyJsxSource) {
       return {};
     }
-    const stack: { await: boolean }[] = [];
     return {
-      ArrowFunctionExpression() {
-        stack.push({ await: false });
-      },
-      'ArrowFunctionExpression:exit'(d) {
-        stack.pop();
-      },
-      AwaitExpression() {
-        const last = stack[stack.length - 1];
-        if (last) {
-          last.await = true;
-        }
-      },
       'CallExpression[callee.name=/^use[A-Z]/]'(node: CallExpression & Rule.NodeParentExtension) {
-        const last = stack[stack.length - 1];
-        if (last && last.await) {
-          context.report({
-            node,
-            messageId: 'use-after-await',
-          });
-        }
         let parent = node as Rule.Node;
         while ((parent = parent.parent)) {
           const type = parent.type;
@@ -56,7 +35,13 @@ export const useMethodUsage: Rule.RuleModule = {
             case 'MemberExpression':
             case 'BinaryExpression':
             case 'UnaryExpression':
+            case 'ReturnStatement':
             case 'BlockStatement':
+            case 'ChainExpression':
+            case 'Property':
+            case 'ObjectExpression':
+            case 'CallExpression':
+            case 'TSAsExpression':
               break;
             case 'ArrowFunctionExpression':
             case 'FunctionExpression':
@@ -78,22 +63,21 @@ export const useMethodUsage: Rule.RuleModule = {
               }
               context.report({
                 node,
-                messageId: 'use-wrong-function',
+                messageId: 'useWrongFunction',
               });
               return;
             case 'FunctionDeclaration':
               if (!parent.id?.name.startsWith('use')) {
                 context.report({
                   node,
-                  messageId: 'use-wrong-function',
+                  messageId: 'useWrongFunction',
                 });
-                return;
               }
-              break;
+              return;
             default:
               context.report({
                 node,
-                messageId: 'use-not-root',
+                messageId: 'useWrongFunction',
               });
               return;
             // ERROR
@@ -101,5 +85,47 @@ export const useMethodUsage: Rule.RuleModule = {
         }
       },
     };
+  },
+};
+
+const useWrongFunctionGood = `
+export const Counter = component$(() => {
+  const count = useSignal(0);
+});
+`.trim();
+
+const useWrongFunctionGood2 = `
+export const useCounter = () => {
+  const count = useSignal(0);
+  return count;
+};
+`.trim();
+
+const useWrongFunctionBad = `
+export const Counter = (() => {
+  const count = useSignal(0);
+});
+`.trim();
+
+export const useMethodUsageExamples: QwikEslintExamples = {
+  useWrongFunction: {
+    good: [
+      {
+        codeHighlight: '{2} /component$/#a',
+        code: useWrongFunctionGood,
+      },
+      {
+        codeHighlight: '{2} /component$/#a',
+        code: useWrongFunctionGood2,
+      },
+    ],
+    bad: [
+      {
+        codeHighlight: '{2} /component$/#a',
+        code: useWrongFunctionBad,
+        description:
+          '`use*` methods can only be used in `component$` functions or inside `use*` hooks (e.g. `useCounter`).',
+      },
+    ],
   },
 };
